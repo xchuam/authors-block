@@ -1,4 +1,8 @@
-# Authors-block Extension For Quarto
+# Authors-block Extension For Quarto (Frontiers in Microbiology version)
+
+Forked from kapsner/authors-block and modified based on the format requirements of Frontiers in Microbiology. To use it, install the original extension first (see below), and then replace the file **from_author_info_blocks.lua** from this repository. 
+
+Below is the original readme. 
 
 <!-- badges: start -->
 [![R build status](https://github.com/kapsner/authors-block/workflows/tests/badge.svg?branch=main)](https://github.com/kapsner/authors-block/actions)
