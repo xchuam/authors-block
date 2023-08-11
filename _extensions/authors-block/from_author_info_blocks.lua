@@ -34,7 +34,7 @@ local default_marks
 local default_marks = {
   corresponding_author = FORMAT == 'latex'
     and {pandoc.RawInline('latex', '*')}
-    or {pandoc.Str '✉'},
+    or {pandoc.Str '*'},
   equal_contributor = FORMAT == 'latex'
     and {pandoc.RawInline('latex', '$\\dagger{}$')}
     or {pandoc.Str '*'},
@@ -98,14 +98,21 @@ local function create_correspondence_blocks(authors, mark)
   local corresponding_authors = List:new{}
   for _, author in ipairs(authors) do
     if is_corresponding_author(author) then
+      local author_name = List:new(
+        author.name.literal
+        )
+      table.insert(corresponding_authors, author_name)
+    end
+  end
+  local corresponding_email = List:new{}
+  for _, author in ipairs(authors) do
+    if is_corresponding_author(author) then
       local mailto = 'mailto:' .. utils.stringify(author.email)
       local author_with_mail = List:new(
-        -- modified by @kapsner
-        author.name.literal .. List:new{pandoc.Space(),  pandoc.Str '<'} ..
-        author.email .. List:new{pandoc.Str '>'}
+        author.email
       )
       local link = pandoc.Link(author_with_mail, mailto)
-      table.insert(corresponding_authors, {link})
+      table.insert(corresponding_email, {link})
     end
   end
   if #corresponding_authors == 0 then
@@ -114,15 +121,18 @@ local function create_correspondence_blocks(authors, mark)
   local correspondence = List:new{
     pandoc.Superscript(mark'corresponding_author'),
     pandoc.Space(),
-    pandoc.Str'Correspondence:',
+    pandoc.Strong(pandoc.Str'Correspondence:'),
     pandoc.Space()
   }
   local sep = List:new{pandoc.Str',',  pandoc.Space()}
-  return {
-    pandoc.Para(correspondence .. intercalate(corresponding_authors, sep))
-  }
+  local correspondence_para = pandoc.Para(correspondence)
+  local authors_para = pandoc.Para(intercalate(corresponding_authors, sep))
+  local email_para = pandoc.Para(intercalate(corresponding_email, sep))
+  return { correspondence_para, authors_para, email_para }
 end
 M.create_correspondence_blocks = create_correspondence_blocks
+
+
 
 -- taken from https://github.com/pandoc/lua-filters/blob/1660794b991c3553968beb993f5aabb99b317584/author-info-blocks/author-info-blocks.lua
 --- Create inlines for a single author (includes all author notes)
@@ -148,14 +158,9 @@ local function author_inline_generator (get_mark)
       author_marks[#author_marks + 1] = get_mark 'corresponding_author'
     end
     -- modified by @kapsner
-    if FORMAT:match 'latex' then
-      author.name.literal[#author.name.literal + 1] = pandoc.Superscript(intercalate(author_marks, {pandoc.Str ','}))
-      return author
-    else
-      local res = List.clone(author.name.literal)
-      res[#res + 1] = pandoc.Superscript(intercalate(author_marks, {pandoc.Str ','}))
-      return res
-    end
+    local res = List.clone(author.name.literal)
+    res[#res + 1] = pandoc.Superscript(intercalate(author_marks, {pandoc.Str ','}))
+    return res
   end
 end
 M.author_inline_generator = author_inline_generator
@@ -173,8 +178,9 @@ local function create_authors_inlines(authors, mark)
   if #authors > 1 then
     result:extend(List:new{pandoc.Str ","} .. and_str)
   end
+  
   result:extend(last_author)
-  return result
+  return pandoc.Strong(result)
 end
 M.create_authors_inlines = create_authors_inlines
 
